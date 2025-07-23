@@ -1,5 +1,6 @@
 "use client";
 import axios from "axios";
+import { axiosInstance } from "@/app/lib/axios";
 import Head from "next/head";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -8,86 +9,6 @@ import {
   parsePhoneNumberFromString,
 } from "libphonenumber-js";
 
-// Reusable Input Component
-const NumberInput = ({
-  value,
-  onChange,
-  placeholder,
-  error,
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string;
-  error?: string | null;
-}) => {
-  return (
-    <div className="text-center">
-      <input
-        type="text"
-        value={value}
-        onChange={onChange}
-        className="w-full p-3 border border-gray-600 rounded-lg bg-[#1f2937] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all"
-        placeholder={placeholder}
-      />
-      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-    </div>
-  );
-};
-
-// Reusable Form Component
-const MessageForm = ({
-  title,
-  description,
-  value,
-  onChange,
-  placeholder,
-  error,
-  countryCode,
-  onCountryChange,
-  countries,
-  type
-}: {
-  title: string;
-  description: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string;
-  error?: string | null;
-  countryCode: string;
-  onCountryChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  countries: { code: string; name: string }[];
-  type: boolean
-}) => {
-  return (
-    <>
-      <div>
-        <h1 className="text-2xl font-bold mb-2">{title}</h1>
-        <p className="text-sm text-gray-400 my-4">{description}</p>
-      </div>
-      <div className={type ? `flex gap-2` : ""}>
-        {type && <select
-          value={countryCode}
-          onChange={onCountryChange}
-          className="w-1/3 p-3 border border-gray-600 rounded-lg bg-[#1f2937] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all"
-        >
-          {countries.map((country) => (
-            <option key={country.code} value={country.code}>
-              {country.name} ({country.code})
-            </option>
-          ))}
-        </select>}
-        <NumberInput
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          error={error}
-        />
-      </div>
-    </>
-  );
-};
-
-// Main Page Component
 export default function NumberInputPage() {
   const query = useSearchParams();
   const router = useRouter();
@@ -156,17 +77,9 @@ export default function NumberInputPage() {
 
       try {
         setLoading(true);
-        await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3000"
-          }/auth/number/connect`,
-          { phone: `${countryCode}${number}` },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        await axiosInstance.post(`/auth/number/connect`, {
+          phone: `${countryCode}${number}`,
+        });
         setMessageSent(true);
       } catch (err) {
         setError("Failed to send message. Please try again.");
@@ -183,19 +96,11 @@ export default function NumberInputPage() {
 
       try {
         setLoading(true);
-        const response = await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3000"
-          }/auth/number/verify`,
-          { otp },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axiosInstance.post(`/auth/number/verify`, {
+          code: otp,
+        });
         if (response.data) {
-          alert("Connected successfully");
+          router.replace("/home")
         } else {
           setError("Verification failed. Please try again.");
         }
@@ -213,44 +118,74 @@ export default function NumberInputPage() {
         <title>Enter Number | MailBridge</title>
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117] px-4">
-        <div className="w-full max-w-sm bg-[#161b22] p-8 rounded-2xl shadow-lg text-white text-center">
-          {!messageSent ? (
-            <MessageForm
-              title="Enter your WhatsApp Number"
-              description="Please provide your WhatsApp number to proceed."
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="Enter your number"
-              error={error}
-              countryCode={countryCode}
-              onCountryChange={(e) => setCountryCode(e.target.value)}
-              countries={countries}
-              type={true}
-            />
-          ) : (
-            <MessageForm
-              title="Verify Your Account"
-              description="Please enter the OTP sent to your WhatsApp number."
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="Enter OTP"
-              error={error}
-              countryCode={countryCode}
-              onCountryChange={() => {}}
-                countries={[]}
-                type={false}
-            />
-          )}
-          <button
-            className={`w-full mt-4 py-2 px-4 rounded-md bg-blue-500 text-white font-medium shadow-md transform transition-transform duration-200 hover:scale-105 hover:shadow-lg focus:outline-none ${
-              loading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Processing..." : "Continue"}
-          </button>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {!messageSent
+                ? "Enter your WhatsApp Number"
+                : "Verify Your Account"}
+            </h1>
+            <p className="text-sm text-gray-600">
+              {!messageSent
+                ? "Please provide your WhatsApp number to proceed."
+                : "Please enter the OTP sent to your WhatsApp number."}
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {!messageSent ? (
+              <div className="flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setCountryCode(e.target.value)
+                  }
+                  className="w-1/3 p-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                >
+                  {countries.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name} ({country.code})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={number}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setNumber(e.target.value)
+                  }
+                  className="flex-1 p-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  placeholder="Enter your number"
+                />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={otp}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setOtp(e.target.value)
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                placeholder="Enter OTP"
+                maxLength={6}
+              />
+            )}
+
+            {error && (
+              <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+            )}
+
+            <button
+              className={`w-full mt-6 py-3 px-4 rounded-lg bg-primary text-white font-medium shadow-md transform transition-all duration-200 hover:opacity-90 hover:shadow-lg focus:outline-none ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Continue"}
+            </button>
+          </div>
         </div>
       </div>
     </>
