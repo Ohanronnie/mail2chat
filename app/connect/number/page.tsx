@@ -100,7 +100,7 @@ export default function NumberInputPage() {
           code: otp,
         });
         if (response.data) {
-          router.replace("/home")
+          router.replace("/home");
         } else {
           setError("Verification failed. Please try again.");
         }

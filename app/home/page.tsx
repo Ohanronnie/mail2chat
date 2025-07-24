@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const [connections, setConnections] = useState({
-    email: "user@example.com", // This should come from your API
+    email: "user@example.com",
     phone: "+1234567890",
     phoneVerified: false,
-    // This should come from your API
   });
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   useEffect(function () {
     axiosInstance
       .get("/auth/user")
@@ -27,7 +27,9 @@ export default function HomePage() {
       });
   }, []);
   const disconnect = () => {
+    setLoading(true);
     axiosInstance.delete("/auth/user").finally(() => {
+      setLoading(false);
       router.replace("/");
     });
   };
@@ -113,8 +115,9 @@ export default function HomePage() {
           <button
             className="w-full py-3 px-4 rounded-lg bg-primary text-white font-medium shadow-md transform transition-all duration-200 hover:opacity-90 hover:shadow-lg focus:outline-none"
             onClick={disconnect}
+            disabled={loading}
           >
-            Disconnect All
+            {loading ? "Loading..." : "Disconnect All"}
           </button>
         </div>
       </div>
