@@ -3,13 +3,13 @@ import axios from "axios";
 import { axiosInstance } from "@/app/lib/axios";
 import Head from "next/head";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import {
   isValidPhoneNumber,
   parsePhoneNumberFromString,
 } from "libphonenumber-js";
 
-export default function NumberInputPage() {
+function NumberInputPage() {
   const query = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -190,4 +190,11 @@ export default function NumberInputPage() {
       </div>
     </>
   );
+}
+export default function Connect(){
+  return (
+    <Suspense>
+      <NumberInputPage />
+    </Suspense>
+  )
 }
